@@ -1,14 +1,84 @@
  <script type="text/javascript" src="swfobject.js"></script>    
 
-<div id="ytapiplayer">
+<div id="videoHolder">
   You need Flash player 8+ and JavaScript enabled to view this video.
+</div>
+
+<div style="opacity: 0; ">
+<div id="audioHolder"></div>
 </div>
 
 <script type="text/javascript">
 
-  var params = { allowScriptAccess: "always" };
-  var atts = { id: "myytplayer" };
-  swfobject.embedSWF("http://www.youtube.com/v/VIDEO_ID?enablejsapi=1&playerapiid=ytplayer&version=3",
-                       "ytapiplayer", "425", "356", "8", null, null, params, atts);
+var params = { allowScriptAccess: "always" };
+var atts = { id: "video" };
+swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=video&version=3", "videoHolder", "425", "356", "8", null, null, params, atts);
 
+var atts = { id: "audio" };
+swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=audio&version=3", "audioHolder", "200", "200", "8", null, null, params, atts);
+
+var video;
+var audio;
+
+var data = window.location.hash.substr(1);
+var config = data.split(":");
+
+function onYouTubePlayerReady(playerId) {
+  if (playerId == "video") {
+    video = document.getElementById("video");
+  } else {
+    audio = document.getElementById("audio");
+  }
+
+  if (video && audio) {
+    video.mute();
+    video.addEventListener("onStateChange", "onStateChangeVideo");
+    video.cueVideoById(config[0], 0, "default");
+    //video.pause();
+    audio.addEventListener("onStateChange", "onStateChangeAudio");
+    audio.cueVideoById(config[1], 0, "hd720");
+    //audio.pause();
+  }
+}
+
+var videoState = false;
+var audioState = false;
+
+var PAUSED = 2;
+var CUED = 5;
+var haventPlayed = true;
+
+function onStateChangeVideo(event) {
+  console.log("video", event);
+  if (event == PAUSED || event == CUED) {
+    videoState = event;
+    setTimeout(maybeStartStuffHappening(), 0);
+  }
+}
+
+function onStateChangeAudio(event) {
+  console.log("audio", event);
+  if (event == PAUSED || event == CUED) {
+    audioState = event;
+    setTimeout(maybeStartStuffHappening(), 0);
+  }
+}
+
+function maybeStartStuffHappening() {
+  console.log(videoState, audioState);
+  if ((videoState == CUED) && (audioState == CUED)) {
+    console.log("here we are about to pause");
+    setTimeout(function() { video.seekTo(0, true); video.pauseVideo(); }, 0);
+    setTimeout(function() { audio.seekTo(0, true); audio.pauseVideo(); }, 0);
+  }
+  console.log("DFFDDFFD");
+  if ((videoState == PAUSED) && (audioState == PAUSED) && haventPlayed) {
+    haventPlayed = false;
+    console.log("here we are about to play", videoState, audioState);
+    video.seekTo(0, false);
+    video.playVideo();
+    audio.seekTo(0, false);
+    audio.playVideo();
+  }
+}
 </script>
