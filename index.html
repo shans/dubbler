@@ -1,7 +1,19 @@
 <!DOCTYPE html>
+<style>
 
+.invisible {
+  opacity: 0;
+}
+
+.visible {
+}
+
+</style>
+
+<div id="videoHider" class="invisible">
 <div id="videoHolder">
   You need Flash player 8+ and JavaScript enabled to view this video.
+</div>
 </div>
 
 <div style="opacity: 0; position: absolute">
@@ -45,7 +57,11 @@ function togglePause(event) {
 }
 
 pause.addEventListener("click", togglePause);
-document.addEventListener("keypress", function(event) { if (event.charCode == 32) { togglePause(event); } event.preventDefault(); return false; });
+document.addEventListener("keypress", function(event) { 
+  if (event.charCode == 32) { togglePause(event); } 
+  event.preventDefault(); 
+  return false;
+});
 
 function onYouTubePlayerReady(playerId) {
   if (playerId == "video") {
@@ -56,51 +72,52 @@ function onYouTubePlayerReady(playerId) {
 
   if (video && audio) {
     video.mute();
+    audio.mute();
     video.addEventListener("onStateChange", "onStateChangeVideo");
-    video.cueVideoById(config[0], 0, "default");
+    video.loadVideoById(config[0], 0, "default");
     audio.addEventListener("onStateChange", "onStateChangeAudio");
-    audio.cueVideoById(config[1], 0, "hd720");
+    audio.loadVideoById(config[1], 0, "hd720");
   }
 }
 
 var videoState = false;
 var audioState = false;
 
+var PLAYING = 1;
 var PAUSED = 2;
 var CUED = 5;
-var haventPlayed = true;
+var started = false;
 
 function onStateChangeVideo(event) {
+  if (started) { return }
   console.log("video", event);
-  if (event == PAUSED || event == CUED) {
+  if (event == PLAYING) {
     videoState = event;
-    setTimeout(maybeStartStuffHappening(), 0);
+    if (audioState == PLAYING) {
+      setTimeout(maybeStartStuffHappening, 0);
+    }
   }
 }
 
 function onStateChangeAudio(event) {
+  if (started) { return }
   console.log("audio", event);
-  if (event == PAUSED || event == CUED) {
+  if (event == PLAYING) {
     audioState = event;
-    setTimeout(maybeStartStuffHappening(), 0);
+    if (videoState == PLAYING) {
+      setTimeout(maybeStartStuffHappening, 0);
+    }
   }
 }
 
 function maybeStartStuffHappening() {
   console.log(videoState, audioState);
-  if ((videoState == CUED) && (audioState == CUED)) {
-    console.log("here we are about to pause");
-    setTimeout(function() { video.seekTo(0, true); video.pauseVideo(); }, 0);
-    setTimeout(function() { audio.seekTo(0, true); audio.pauseVideo(); }, 0);
-  }
-  console.log("DFFDDFFD");
-  if ((videoState == PAUSED) && (audioState == PAUSED) && haventPlayed) {
-    haventPlayed = false;
-    console.log("here we are about to play", videoState, audioState);
-    video.seekTo(0, false);
-    video.playVideo();
-    audio.seekTo(0, false);
-    audio.playVideo();
-  }
+  started = true;
+  video.seekTo(0, true); 
+  audio.seekTo(0, true);
+  console.log("seeked");
+  audio.unMute();
+  console.log("unMuted");
+  document.getElementById("videoHider").setAttribute("class", "visible");
 }
 </script>
