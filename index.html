@@ -28,9 +28,25 @@ body {
   text-align: center;
 }
 
+@font-face {
+    font-family: 'HVDPosterRegular';
+    src: url('HVD_Poster-webfont.eot');
+    src: url('HVD_Poster-webfont.eot?#iefix') format('embedded-opentype'),
+         url('HVD_Poster-webfont.woff') format('woff'),
+         url('HVD_Poster-webfont.ttf') format('truetype'),
+         url('HVD_Poster-webfont.svg#HVDPosterRegular') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+h1 {
+  font: 60px 'HVDPosterRegular';
+  text-transform: uppercase;
+}
+
 </style>
 
-<div id="header">OMG A HEADER</div>
+<div id="header"><h1>The Dubbler</h1></div>
 <div id="content">
   <div id="videoHider" class="invisible">
     <div id="videoHolder">
