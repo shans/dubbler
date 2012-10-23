@@ -19,6 +19,11 @@
   width: 640px;
 }
 
+#videoText, #audioText {
+  width: 400px;
+  margin-left: 10px;
+}
+
 body {
   text-align: center;
 }
@@ -37,6 +42,11 @@ body {
     <div id="audioHolder"></div>
   </div>
   <button class="button" id="pause">Big ol' pause button</button>
+
+  <div id="inputs">
+    <div><label for="video">Video</label> <input id="videoText"></input></div>
+    <div><label for="audio">Audio</label> <input id="audioText"></input></div>
+
 </div>
 <div id="footer">OMG A FOOTER</div>
 
@@ -48,6 +58,34 @@ body {
 var data = window.location.hash.substr(1);
 var config = data.split(":");
 
+if (config.length == 2) {
+  videoText.value = "http://www.youtube.com/watch?v=" + config[0];
+  audioText.value = "http://www.youtube.com/watch?v=" + config[1];
+}
+
+var idRE = /v=([a-zA-Z0-9_-]+)/
+
+function extractID(text) {
+  var result = idRE.exec(text);
+  if (result && result.length > 1) {
+    return result[1];
+  }
+}
+
+function updateVideos(event) {
+  if (event.keyCode == 13) {
+    var videoSource = extractID(videoText.value);
+    var audioSource = extractID(audioText.value);
+    config = [videoSource, audioSource];
+    console.log(config);
+    updateSources();
+  }
+  return true;
+}
+
+videoText.addEventListener("keypress", updateVideos);
+audioText.addEventListener("keypress", updateVideos);
+
 var params = { allowScriptAccess: "always" };
 var atts = { id: "video" };
 swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=video&version=3", "videoHolder", "640", "480", "8", null, null, params, atts);
@@ -57,6 +95,7 @@ swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=a
 
 
 function YouTubeObject(playerId) {
+  this.playerId = playerId;
   this.player = document.getElementById(playerId);
   this.state = -1;
 
@@ -91,9 +130,12 @@ function togglePause(event) {
 
 pause.addEventListener("click", togglePause);
 document.addEventListener("keypress", function(event) { 
-  if (event.charCode == 32) { togglePause(event); } 
-  event.preventDefault(); 
-  return false;
+  if (event.charCode == 32) { 
+    togglePause(event);
+    event.preventDefault(); 
+    return false;
+  }
+  return true;
 });
 
 function onYouTubePlayerReady(playerId) {
@@ -104,13 +146,23 @@ function onYouTubePlayerReady(playerId) {
   }
 
   if (video && audio) {
-    video.player.mute();
-    audio.player.mute();
-    video.stateChanged = waitForVideosToLoad;
-    video.player.loadVideoById(config[0], 0, "default");
-    audio.stateChanged = waitForVideosToLoad;
-    audio.player.loadVideoById(config[1], 0, "hd720");
+    updateSources();
   }
+}
+
+function updateSources() {
+  video.player.mute();
+  audio.player.mute();
+  video.stateChanged = waitForVideosToLoad;
+  video.player.stopVideo();
+  video.player.loadVideoById(config[0], 0, "default");
+  audio.stateChanged = waitForVideosToLoad;
+  audio.player.stopVideo();
+  audio.player.loadVideoById(config[1], 0, "hd720");
+  console.log("config is now ", config);
+  video.state = -1;
+  audio.state = -1;
+  document.getElementById("videoHider").setAttribute("class", "invisible");
 }
 
 var PLAYING = 1;
@@ -119,7 +171,7 @@ var BUFFERING = 3;
 var CUED = 5;
 
 function waitForVideosToLoad(event) {
-  console.log("waitForVideosToLoad", event, this);
+  console.log("waitForVideosToLoad", event, this.playerId, video.state, audio.state);
   if (event == PLAYING) {
     this.state = event;
     if (video.state == PLAYING && audio.state == PLAYING) {
