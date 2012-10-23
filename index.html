@@ -36,6 +36,22 @@ swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=v
 var atts = { id: "audio" };
 swfobject.embedSWF("http://www.youtube.com/apiplayer?enablejsapi=1&playerapiid=audio&version=3", "audioHolder", "200", "200", "8", null, null, params, atts);
 
+
+function YouTubeObject(playerId) {
+  this.player = document.getElementById(playerId);
+  this.state = -1;
+
+  window["redirectorFor" + playerId] = function(event) { console.log(event, this); this.handleStateChange(event) }.bind(this);
+  this.player.addEventListener("onStateChange", "redirectorFor" + playerId);
+
+  this.stateChanged = undefined;
+  this.handleStateChange = function(event) {
+    if (this.stateChanged) {
+      this.stateChanged(event);
+    }
+  }
+}
+
 var video;
 var audio;
 
@@ -44,15 +60,13 @@ var pause = document.getElementById("pause");
 
 function togglePause(event) {
   if (paused) {
-    console.log("paused");
     paused = false;
-    video.playVideo();
-    audio.playVideo();
+    video.player.playVideo();
+    audio.player.playVideo();
   } else {
-    console.log("not paused");
     paused = true;
-    video.pauseVideo(); 
-    audio.pauseVideo(); 
+    video.player.pauseVideo(); 
+    audio.player.pauseVideo(); 
   }
 }
 
@@ -65,59 +79,52 @@ document.addEventListener("keypress", function(event) {
 
 function onYouTubePlayerReady(playerId) {
   if (playerId == "video") {
-    video = document.getElementById("video");
+    video = new YouTubeObject("video");
   } else {
-    audio = document.getElementById("audio");
+    audio = new YouTubeObject("audio");
   }
 
   if (video && audio) {
-    video.mute();
-    audio.mute();
-    video.addEventListener("onStateChange", "onStateChangeVideo");
-    video.loadVideoById(config[0], 0, "default");
-    audio.addEventListener("onStateChange", "onStateChangeAudio");
-    audio.loadVideoById(config[1], 0, "hd720");
+    video.player.mute();
+    audio.player.mute();
+    video.stateChanged = waitForVideosToLoad;
+    video.player.loadVideoById(config[0], 0, "default");
+    audio.stateChanged = waitForVideosToLoad;
+    audio.player.loadVideoById(config[1], 0, "hd720");
   }
 }
-
-var videoState = false;
-var audioState = false;
 
 var PLAYING = 1;
 var PAUSED = 2;
+var BUFFERING = 3;
 var CUED = 5;
-var started = false;
 
-function onStateChangeVideo(event) {
-  if (started) { return }
-  console.log("video", event);
+function waitForVideosToLoad(event) {
+  console.log("waitForVideosToLoad", event, this);
   if (event == PLAYING) {
-    videoState = event;
-    if (audioState == PLAYING) {
-      setTimeout(maybeStartStuffHappening, 0);
+    this.state = event;
+    if (video.state == PLAYING && audio.state == PLAYING) {
+      setTimeout(playVideos, 0);
+      video.stateChanged = function(event) { handleBuffering.call(this, audio, event); };
+      audio.stateChanged = function(event) { handleBuffering.call(this, video, event); };
     }
   }
 }
 
-function onStateChangeAudio(event) {
-  if (started) { return }
-  console.log("audio", event);
-  if (event == PLAYING) {
-    audioState = event;
-    if (videoState == PLAYING) {
-      setTimeout(maybeStartStuffHappening, 0);
-    }
+function handleBuffering(other, event) {
+  if (event == BUFFERING && other.state != BUFFERING) {
+    other.player.pauseVideo(); 
+    this.state = BUFFERING;
+  } else if (event == PLAYING && other.state != BUFFERING) {
+    other.player.playVideo();
+    this.state = PLAYING;
   }
 }
 
-function maybeStartStuffHappening() {
-  console.log(videoState, audioState);
-  started = true;
-  video.seekTo(0, true); 
-  audio.seekTo(0, true);
-  console.log("seeked");
-  audio.unMute();
-  console.log("unMuted");
+function playVideos() {
+  video.player.seekTo(0, true); 
+  audio.player.seekTo(0, true);
+  audio.player.unMute();
   document.getElementById("videoHider").setAttribute("class", "visible");
 }
 </script>
